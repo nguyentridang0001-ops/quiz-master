@@ -1,16 +1,26 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { FiPlus, FiTrash2, FiCpu } from "react-icons/fi";
 import { motion } from "framer-motion";
 import Header from "../components/Header";
 
 export default function Home() {
+  const [mounted, setMounted] = useState(false);
+
   const [snippets, setSnippets] = useState([""]);
   const [numQuestions, setNumQuestions] = useState(10);
   const [types, setTypes] = useState({ mc: true, tf: false, short: false });
   const [lang, setLang] = useState("vi");
 
   const router = useRouter();
+
+  // ✅ Fix SSR / Vercel prerender crash
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Khi đang SSR build, không render gì cả để tránh lỗi window/localStorage
+  if (!mounted) return null;
 
   function updateSnippet(index, value) {
     const s = [...snippets];
@@ -46,10 +56,26 @@ export default function Home() {
       lang,
     };
 
+    // ✅ localStorage chỉ chạy ở client
     try {
-      localStorage.setItem("quizSettings", JSON.stringify(payload));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("quizSettings", JSON.stringify(payload));
+      }
     } catch (e) {}
+
     router.push("/ready");
+  }
+
+  function resetAll() {
+    setSnippets([""]);
+    setNumQuestions(10);
+    setTypes({ mc: true, tf: false, short: false });
+
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("quizSettings");
+      }
+    } catch (e) {}
   }
 
   return (
@@ -67,7 +93,13 @@ export default function Home() {
           <h2 className="h2">1. Dán đoạn văn (bài học)</h2>
           <div className="mutedRow">
             <FiCpu />
-            <span style={{ marginLeft: 8, fontWeight: 600, color: "var(--muted-dark)" }}>
+            <span
+              style={{
+                marginLeft: 8,
+                fontWeight: 600,
+                color: "var(--muted-dark)",
+              }}
+            >
               Mascot: Q-Bot
             </span>
           </div>
@@ -160,15 +192,7 @@ export default function Home() {
                 Prepare (Chuyển sang Ready)
               </button>
 
-              <button
-                className="btn ghost"
-                onClick={() => {
-                  setSnippets([""]);
-                  setNumQuestions(10);
-                  setTypes({ mc: true, tf: false, short: false });
-                  localStorage.removeItem("quizSettings");
-                }}
-              >
+              <button className="btn ghost" onClick={resetAll}>
                 Reset
               </button>
             </div>
@@ -211,17 +235,12 @@ export default function Home() {
             </div>
 
             <div className="btnRow">
-              <button
-                className="btn ghost"
-                onClick={() => router.push("/badges")}
-              >
-              Badges
+              <button className="btn ghost" onClick={() => router.push("/badges")}>
+                Badges
               </button>
 
-              <button
-                className="btn ghost"
-                onClick={() => (window.location.href = "/profile")}
-              >
+              {/* ✅ Sửa: không dùng window.location.href */}
+              <button className="btn ghost" onClick={() => router.push("/profile")}>
                 Profile
               </button>
             </div>
@@ -229,127 +248,269 @@ export default function Home() {
         </aside>
       </div>
 
-      {/* Page-specific styles (override + brighten theme) */}
+      {/* Page-specific styles */}
       <style jsx global>{`
-  /* box-sizing toàn cục: tránh overflow do padding/border */
-  *, *::before, *::after { box-sizing: border-box; }
+        *, *::before, *::after {
+          box-sizing: border-box;
+        }
 
-  :root{
-    --bg: #f4f7fb;
-    --card: #ffffff;
-    --muted: #6b7280;
-    --muted-dark: #374151;
-    --text: #0f172a;
-    --accent-start: #6366f1;
-    --accent-end: #06b6d4;
-    --glass: rgba(255,255,255,0.6);
-    --soft-shadow: 0 6px 18px rgba(15,23,42,0.06);
-    --radius: 14px;
-  }
+        :root {
+          --bg: #f4f7fb;
+          --card: #ffffff;
+          --muted: #6b7280;
+          --muted-dark: #374151;
+          --text: #0f172a;
+          --accent-start: #6366f1;
+          --accent-end: #06b6d4;
+          --glass: rgba(255, 255, 255, 0.6);
+          --soft-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+          --radius: 14px;
+        }
 
-  html,body,#__next { height:100%; background: linear-gradient(180deg,#f7fbff 0%, #f4f7fb 100%); color:var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
-  .container { max-width:1200px; margin:28px auto; padding:18px; }
+        html,
+        body,
+        #__next {
+          height: 100%;
+          background: linear-gradient(180deg, #f7fbff 0%, #f4f7fb 100%);
+          color: var(--text);
+          font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+            "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        }
 
-  .header.card, header.card, .brandRow, .logoWrap { background: transparent !important; box-shadow:none !important; }
+        .container {
+          max-width: 1200px;
+          margin: 28px auto;
+          padding: 18px;
+        }
 
-  .card {
-    background: var(--card);
-    border-radius: var(--radius);
-    box-shadow: var(--soft-shadow);
-    padding:18px;
-    border: 1px solid rgba(16,24,40,0.04);
-  }
-  .section { padding:22px; }
+        .header.card,
+        header.card,
+        .brandRow,
+        .logoWrap {
+          background: transparent !important;
+          box-shadow: none !important;
+        }
 
-  .h2 { font-size:22px; margin:0 0 12px 0; color:var(--text); }
-  .h3 { font-size:16px; margin:0 0 12px 0; color:var(--text); font-weight:700; }
+        .card {
+          background: var(--card);
+          border-radius: var(--radius);
+          box-shadow: var(--soft-shadow);
+          padding: 18px;
+          border: 1px solid rgba(16, 24, 40, 0.04);
+        }
 
-  .rowBetween { display:flex; justify-content:space-between; align-items:center; gap:12px; }
-  .mutedRow { display:flex; align-items:center; gap:8px; color:var(--muted); }
+        .section {
+          padding: 22px;
+        }
 
-  .snippetBlock { margin-top:16px; }
-  .snippetHeader { margin-bottom:8px; }
+        .h2 {
+          font-size: 22px;
+          margin: 0 0 12px 0;
+          color: var(--text);
+        }
 
-  /* ---- CHỖ SỬA: textarea không overflow, ngắn lại 1 tí ---- */
-  .textarea {
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;    /* quan trọng: padding sẽ nằm trong width */
-    min-height: 110px;         /* giảm hơi thấp xuống (ngắn 1 tí như yêu cầu) */
-    resize: vertical;
-    border-radius:10px;
-    border:1px solid rgba(15,23,42,0.05);
-    padding:12px;              /* giảm padding ngang để không làm chèn */
-    background: linear-gradient(180deg, #fff, #fbfdff);
-    color:var(--text);
-    box-shadow: inset 0 1px 0 rgba(15,23,42,0.02);
-    font-size:14px;
-    overflow-wrap: break-word;
-  }
-  /* nếu muốn giới hạn chiều ngang thêm, dùng (bỏ comment): */
-  /* .textarea { max-width: calc(100% - 20px); } */
+        .h3 {
+          font-size: 16px;
+          margin: 0 0 12px 0;
+          color: var(--text);
+          font-weight: 700;
+        }
 
-  .gridWrap { display:grid; grid-template-columns: 1fr 360px; gap:20px; margin-top:18px; align-items:start; }
-  .leftCol { display:flex; flex-direction:column; gap:18px; }
-  .sidebar { }
+        .rowBetween {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+        }
 
-  .labelMuted { color:var(--muted); display:block; margin-bottom:8px; font-size:13px; }
-  .configRow { display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; }
-  .field { min-width:220px; }
-  .input {
-    display:block;
-    padding:10px 12px;
-    border-radius:8px;
-    border:1px solid rgba(15,23,42,0.06);
-    background: #fbfdff;
-    width:100%;
-    font-size:14px;
-    box-sizing: border-box;
-  }
+        .mutedRow {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: var(--muted);
+        }
 
-  .typeGrid { display:flex; gap:12px; flex-wrap:wrap; margin-top:6px; }
-  .typeItem { display:inline-flex; align-items:center; gap:8px; background: linear-gradient(180deg,#fbfdff,#f7fbff); padding:8px 12px; border-radius:10px; border:1px solid rgba(15,23,42,0.04); font-size:14px; color:var(--muted-dark); }
+        .snippetBlock {
+          margin-top: 16px;
+        }
 
-  .btnRow { margin-top:14px; display:flex; gap:10px; align-items:center; }
-  .btn {
-    border-radius:10px;
-    padding:10px 14px;
-    border: 1px solid rgba(15,23,42,0.06);
-    background: white;
-    cursor:pointer;
-    font-weight:600;
-    box-shadow: 0 4px 10px rgba(16,24,40,0.04);
-  }
-  .btn.ghost { background: linear-gradient(180deg,#fff,#fbfdff); color:var(--muted-dark); }
-  .btn.iconBtn { display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; padding:0; }
-  .btn.primary {
-    background: linear-gradient(90deg, var(--accent-start), var(--accent-end));
-    color: #fff;
-    border: none;
-    box-shadow: 0 8px 24px rgba(99,102,241,0.14);
-  }
+        .snippetHeader {
+          margin-bottom: 8px;
+        }
 
-  .previewBox { margin-top:12px; background: linear-gradient(180deg,#fbfdff,#f8fbff); padding:12px; border-radius:10px; border:1px solid rgba(15,23,42,0.03); }
-  .previewItem { margin-bottom:8px; }
-  .previewText { color:var(--muted-dark); margin-top:6px; }
+        .textarea {
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+          min-height: 110px;
+          resize: vertical;
+          border-radius: 10px;
+          border: 1px solid rgba(15, 23, 42, 0.05);
+          padding: 12px;
+          background: linear-gradient(180deg, #fff, #fbfdff);
+          color: var(--text);
+          box-shadow: inset 0 1px 0 rgba(15, 23, 42, 0.02);
+          font-size: 14px;
+          overflow-wrap: break-word;
+        }
 
-  .muted { color:var(--muted); }
-  .small { font-size:13px; color:var(--muted); }
+        .gridWrap {
+          display: grid;
+          grid-template-columns: 1fr 360px;
+          gap: 20px;
+          margin-top: 18px;
+          align-items: start;
+        }
 
-  .qnav { display:flex; gap:8px; flex-wrap:wrap; }
-  .qbtn { width:36px; height:36px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(15,23,42,0.06); background:#fff; cursor:pointer; }
-  .qbtn.active { background: linear-gradient(90deg,var(--accent-start),var(--accent-end)); color:#fff; box-shadow: 0 8px 20px rgba(99,102,241,0.12); border:none; }
+        .leftCol {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+        }
 
-  @media (max-width:980px) {
-    .gridWrap { grid-template-columns: 1fr; }
-    .container { padding:12px; }
-  }
+        .labelMuted {
+          color: var(--muted);
+          display: block;
+          margin-bottom: 8px;
+          font-size: 13px;
+        }
 
-  ::-webkit-scrollbar { height:10px; width:10px; }
-  ::-webkit-scrollbar-thumb { background: linear-gradient(90deg, rgba(99,102,241,0.4), rgba(6,182,212,0.3)); border-radius:8px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-`}</style>
+        .configRow {
+          display: flex;
+          gap: 18px;
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
 
+        .field {
+          min-width: 220px;
+        }
+
+        .input {
+          display: block;
+          padding: 10px 12px;
+          border-radius: 8px;
+          border: 1px solid rgba(15, 23, 42, 0.06);
+          background: #fbfdff;
+          width: 100%;
+          font-size: 14px;
+          box-sizing: border-box;
+        }
+
+        .typeGrid {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-top: 6px;
+        }
+
+        .typeItem {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: linear-gradient(180deg, #fbfdff, #f7fbff);
+          padding: 8px 12px;
+          border-radius: 10px;
+          border: 1px solid rgba(15, 23, 42, 0.04);
+          font-size: 14px;
+          color: var(--muted-dark);
+        }
+
+        .btnRow {
+          margin-top: 14px;
+          display: flex;
+          gap: 10px;
+          align-items: center;
+        }
+
+        .btn {
+          border-radius: 10px;
+          padding: 10px 14px;
+          border: 1px solid rgba(15, 23, 42, 0.06);
+          background: white;
+          cursor: pointer;
+          font-weight: 600;
+          box-shadow: 0 4px 10px rgba(16, 24, 40, 0.04);
+        }
+
+        .btn.ghost {
+          background: linear-gradient(180deg, #fff, #fbfdff);
+          color: var(--muted-dark);
+        }
+
+        .btn.iconBtn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 38px;
+          height: 38px;
+          padding: 0;
+        }
+
+        .btn.primary {
+          background: linear-gradient(
+            90deg,
+            var(--accent-start),
+            var(--accent-end)
+          );
+          color: #fff;
+          border: none;
+          box-shadow: 0 8px 24px rgba(99, 102, 241, 0.14);
+        }
+
+        .previewBox {
+          margin-top: 12px;
+          background: linear-gradient(180deg, #fbfdff, #f8fbff);
+          padding: 12px;
+          border-radius: 10px;
+          border: 1px solid rgba(15, 23, 42, 0.03);
+        }
+
+        .previewItem {
+          margin-bottom: 8px;
+        }
+
+        .previewText {
+          color: var(--muted-dark);
+          margin-top: 6px;
+        }
+
+        .muted {
+          color: var(--muted);
+        }
+
+        .small {
+          font-size: 13px;
+          color: var(--muted);
+        }
+
+        @media (max-width: 980px) {
+          .gridWrap {
+            grid-template-columns: 1fr;
+          }
+          .container {
+            padding: 12px;
+          }
+        }
+
+        ::-webkit-scrollbar {
+          height: 10px;
+          width: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+          background: linear-gradient(
+            90deg,
+            rgba(99, 102, 241, 0.4),
+            rgba(6, 182, 212, 0.3)
+          );
+          border-radius: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+          background: transparent;
+        }
+      `}</style>
     </div>
   );
 }
