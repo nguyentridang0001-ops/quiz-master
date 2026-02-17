@@ -1,0 +1,22 @@
+{
+  "name": "quizmaster-ai",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@google/genai": "^1.41.0",
+    "bcryptjs": "^3.0.3",
+    "framer-motion": "^12.34.0",
+    "next": "13.4.0",
+    "next-auth": "^4.24.13",
+    "openai": "4.9.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-icons": "^5.5.0",
+    "recharts": "^3.7.0"
+  }
+}
